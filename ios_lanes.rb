@@ -58,7 +58,7 @@ platform :ios do
       workspace: 'Runner.xcworkspace',
       scheme: scheme,
       output_directory: './../build/ios',
-      output_name: "#{appname}.ipa"
+      output_name: "#{appname}.ipa",
       export_options: {
         provisioningProfiles: {
           "com.mikro.sirketim" => "MIKRO_SIRKETIM_PROD_PROFILE"
