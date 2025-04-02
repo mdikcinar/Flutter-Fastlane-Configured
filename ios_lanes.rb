@@ -16,7 +16,6 @@ platform :ios do
     app_store_connect_api_key(
       key_id: key_id,
       issuer_id: issuer_id,
-      key_filepath: key_filepath,
       key_content: key_content,
       duration: 1200,
       in_house: false
