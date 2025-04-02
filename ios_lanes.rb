@@ -5,19 +5,19 @@ platform :ios do
   lane :connect_app_store do |options|
     validate_app_store_credentials
 
-    key_id = ENV['APP_STORE_KEY_ID']
-    issuer_id = ENV['APP_STORE_ISSUER_ID']
-    key_filepath = "../../../bin/fastlane/store_keys/#{ENV['APP_STORE_KEY_FILENAME']}"
+    key_id = ENV['APP_STORE_CONNECT_KEY_IDENTIFIER']
+    issuer_id = ENV['APP_STORE_CONNECT_ISSUER_ID']
+    key_content = ENV['APP_STORE_CONNECT_PRIVATE_KEY']
 
     UI.message("App Store Connect Credentials:")
     UI.message("Key ID: #{key_id}")
     UI.message("Issuer ID: #{issuer_id}")
-    UI.message("Key Filepath: #{key_filepath}")
 
     app_store_connect_api_key(
       key_id: key_id,
       issuer_id: issuer_id,
       key_filepath: key_filepath,
+      key_content: key_content,
       duration: 1200,
       in_house: false
     )

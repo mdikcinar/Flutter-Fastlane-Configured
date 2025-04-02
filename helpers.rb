@@ -21,9 +21,9 @@ end
 
 def validate_app_store_credentials
   required_env_vars = [
-    'APP_STORE_KEY_ID',
-    'APP_STORE_ISSUER_ID',
-    'APP_STORE_KEY_FILENAME'
+    'APP_STORE_CONNECT_KEY_IDENTIFIER',
+    'APP_STORE_CONNECT_ISSUER_ID',
+    'APP_STORE_CONNECT_KEY_CONTENT'
   ]
 
   missing_vars = required_env_vars.select { |var| ENV[var].nil? || ENV[var].empty? }
