@@ -47,6 +47,7 @@ platform :ios do
     
     appname = options[:app_name]
     scheme = options[:scheme]
+    export_options = options[:export_options]
 
     UI.message("Building iOS app:")
     UI.message("App Name: #{appname}")
@@ -59,11 +60,7 @@ platform :ios do
       scheme: scheme,
       output_directory: './../build/ios',
       output_name: "#{appname}.ipa",
-      export_options: {
-        provisioningProfiles: {
-          "com.mikro.sirketim" => "Mikro Prod Profile"
-        }
-      }
+      export_options: export_options
     )
   end
 
