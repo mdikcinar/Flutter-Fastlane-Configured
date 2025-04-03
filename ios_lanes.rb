@@ -53,7 +53,7 @@ platform :ios do
     UI.message("App Name: #{appname}")
     UI.message("Scheme: #{scheme}")
 
-    cocoapods(clean: true, use_bundle_exec: false)
+    cocoapods(use_bundle_exec: true)
   
     build_app(
       workspace: 'Runner.xcworkspace',
