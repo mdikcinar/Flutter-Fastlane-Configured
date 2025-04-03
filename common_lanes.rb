@@ -29,7 +29,7 @@ end
 desc 'Send notification to Slack'
 lane :send_slack_message do |options|
   slack_message = options[:slack_message]
-  slack_url = ENV['SLACK_URL']
+  slack_url = ENV['SLACK_HOOK_URL']
 
   if slack_url.nil? || slack_url.empty?
     UI.important('Skipping Slack notification - No SLACK_URL provided')
