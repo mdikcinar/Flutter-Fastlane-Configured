@@ -92,7 +92,7 @@ platform :ios do
     build_app_lane(options)
     upload_to_testflight_lane(options)
     upload_symbols_to_crashlytics_lane(options)
-    send_slack_message(options)
-    add_git_tag_method(options)
+    #send_slack_message(options)
+    #add_git_tag_method(options)
   end
 end 
