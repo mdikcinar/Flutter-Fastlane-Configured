@@ -5,19 +5,22 @@ platform :ios do
   lane :connect_app_store do |options|
     validate_app_store_credentials
 
-    key_id = ENV['APP_STORE_KEY_ID']
-    issuer_id = ENV['APP_STORE_ISSUER_ID']
-    key_filepath = "../../../bin/fastlane/store_keys/#{ENV['APP_STORE_KEY_FILENAME']}"
+    key_id = ENV['APP_STORE_CONNECT_KEY_IDENTIFIER']
+    issuer_id = ENV['APP_STORE_CONNECT_ISSUER_ID']
+    key_content = fetch_app_store_private_key_content
+
+    if key_content.nil? || key_content.empty?
+      UI.user_error!('App Store Connect private key content could not be loaded. Set APP_STORE_CONNECT_PRIVATE_KEY or APP_STORE_CONNECT_PRIVATE_KEY_PATH.')
+    end
 
     UI.message("App Store Connect Credentials:")
     UI.message("Key ID: #{key_id}")
     UI.message("Issuer ID: #{issuer_id}")
-    UI.message("Key Filepath: #{key_filepath}")
 
     app_store_connect_api_key(
       key_id: key_id,
       issuer_id: issuer_id,
-      key_filepath: key_filepath,
+      key_content: key_content,
       duration: 1200,
       in_house: false
     )
@@ -48,18 +51,20 @@ platform :ios do
     
     appname = options[:app_name]
     scheme = options[:scheme]
+    export_options = options[:export_options]
 
     UI.message("Building iOS app:")
     UI.message("App Name: #{appname}")
     UI.message("Scheme: #{scheme}")
 
-    cocoapods(clean: true, use_bundle_exec: false)
+    cocoapods(use_bundle_exec: true)
   
     build_app(
       workspace: 'Runner.xcworkspace',
       scheme: scheme,
       output_directory: './../build/ios',
-      output_name: "#{appname}.ipa"
+      output_name: "#{appname}.ipa",
+      export_options: export_options
     )
   end
 
@@ -91,7 +96,13 @@ platform :ios do
     build_app_lane(options)
     upload_to_testflight_lane(options)
     upload_symbols_to_crashlytics_lane(options)
-    send_slack_message(options)
-    add_git_tag_method(options)
+
+    if option_enabled?(options[:enable_slack_notification])
+      send_slack_message(options)
+    end
+
+    if option_enabled?(options[:enable_git_tagging])
+      add_git_tag_method(options)
+    end
   end
 end 

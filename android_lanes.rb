@@ -10,19 +10,18 @@ platform :android do
   desc 'Increment build number for Play Store'
   lane :increment_build_number_lane do |options|
     app_identifier = options[:app_identifier]
-    json_key_file = ENV['JSON_KEY_FILE_PATH']
+    json_key_data = ENV['GOOGLE_SERVICE_ACCOUNT_CREDENTIALS']
 
     UI.message("App Identifier: #{app_identifier}")
-    UI.message("JSON Key File: #{json_key_file}")
 
     UI.user_error!("Missing app_identifier") unless app_identifier
-    UI.user_error!("Missing JSON key file") unless json_key_file
+    UI.user_error!("Missing JSON key data") unless json_key_data
 
     begin
       previous_build_number = google_play_track_version_codes(
         package_name: app_identifier,
         track: 'internal',
-        json_key: json_key_file
+        json_key: json_key_data
       )[0]
 
       $build_number = previous_build_number + 1
@@ -81,7 +80,7 @@ platform :android do
 
   desc 'Upload to Play Store'
   lane :build_store do |options|
-    json_key_file = ENV['JSON_KEY_FILE_PATH']
+    json_key_data = ENV['GOOGLE_SERVICE_ACCOUNT_CREDENTIALS']
     app_identifier = options[:app_identifier]
     flavor = options[:flavor]
     track = options[:track] || 'internal'
@@ -92,7 +91,7 @@ platform :android do
       track: track,
       aab: bundle_path,
       package_name: app_identifier,
-      json_key: json_key_file
+      json_key: json_key_data
     )
   end
 
@@ -116,8 +115,14 @@ platform :android do
     increment_build_number_lane(options)
     flutter_build(options)
     build_store(options)
-    send_slack_message(options)
-    add_git_tag_method(options)
+
+    if option_enabled?(options[:enable_slack_notification])
+      send_slack_message(options)
+    end
+
+    if option_enabled?(options[:enable_git_tagging])
+      add_git_tag_method(options)
+    end
   end
 
   desc 'Deploy to Firebase'
@@ -126,7 +131,13 @@ platform :android do
     increment_firebase_build_number_lane(options)
     flutter_build(options)
     upload_to_firebase(options)
-    send_slack_message(options)
-    add_git_tag_method(options)
+
+    if option_enabled?(options[:enable_slack_notification])
+      send_slack_message(options)
+    end
+
+    if option_enabled?(options[:enable_git_tagging])
+      add_git_tag_method(options)
+    end
   end
 end 

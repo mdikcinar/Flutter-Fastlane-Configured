@@ -7,7 +7,7 @@ This directory contains Fastlane configuration files for automating iOS and Andr
 ```
 fastlane/
 ├── Fastfile              # Main Fastlane configuration file that imports all lanes
-├── configs_example.rb    # Example configuration file (for reference)
+├── .env.example          # Example environment variables file
 ├── helpers.rb            # Helper methods used across lanes
 ├── common_lanes.rb       # Common lanes used by both platforms
 ├── android_lanes.rb      # Android specific lanes
@@ -20,18 +20,13 @@ fastlane/
 
 Main configuration file that imports all other lane files. This file serves as an entry point for all Fastlane commands.
 
-### configs.rb
+### .env files
 
-Contains environment variables for:
+Fastlane automatically loads dotenv files that live alongside your Fastfile (for example `.env`, `.env.default`, or `.env.production`). Copy `.env.example` to `.env`, fill in your credentials, and keep the real file out of version control. In CI, export the same variables or provide lane-specific dotenv files as needed.
 
-- App Store Connect API credentials
-- Google Play Store JSON key path
-- Slack webhook URL
-Note: This file should not be committed to version control.
+### .env.example
 
-### configs_example.rb
-
-Example configuration file showing the required environment variables structure. Use this as a template to create your own `configs.rb`.
+Template listing the environment variables required by the shared lanes. Use it as a reference when creating your own `.env` files.
 
 ### helpers.rb
 
@@ -48,6 +43,8 @@ Contains lanes used by both platforms:
 
 - `add_git_tag_method`: Adds git tag for releases
 - `send_slack_message`: Sends deployment notifications to Slack
+
+Both of these lanes are optional and disabled by default. Enable them per deployment by passing `enable_slack_notification: true` and/or `enable_git_tagging: true` when calling a deploy lane. Slack notifications also require a `slack_message` option and the `SLACK_HOOK_URL` environment variable.
 
 ### android_lanes.rb
 
@@ -74,6 +71,54 @@ iOS specific lanes:
 - `deploy_ios`: Main deployment lane for TestFlight
 
 ## Usage
+
+### Prerequisites
+- Ruby with Fastlane installed (`gem install fastlane`) or available via Bundler
+- Flutter SDK on the PATH for Android builds
+- Xcode and CocoaPods for iOS builds
+- Access to the credentials described below
+
+### Common Configuration
+- Copy `.env.example` to `.env` (or a lane-specific variant such as `.env.prod`) inside every `fastlane/` folder that runs these lanes, and populate it with your secrets
+- In CI, export the same variables or supply dedicated dotenv files via Fastlane's `--env` flag
+- Keep secrets out of version control (`.env` is already ignored in this repository)
+- Override values per app inside each platform-specific Appfile only when a lane requires something different from the shared defaults
+
+#### Environment Variables
+- `APP_STORE_CONNECT_KEY_IDENTIFIER`: App Store Connect API key identifier (e.g. `ABC123XYZ`)
+- `APP_STORE_CONNECT_ISSUER_ID`: App Store Connect issuer ID GUID
+- `APP_STORE_CONNECT_PRIVATE_KEY` **or** `APP_STORE_CONNECT_PRIVATE_KEY_PATH`: provide the key contents directly or a path (relative or absolute) to the `.p8` file
+- `GOOGLE_SERVICE_ACCOUNT_CREDENTIALS`: path to the Google Play service account JSON file or the raw JSON contents
+- `SLACK_HOOK_URL`: Optional Slack Incoming Webhook URL used by `send_slack_message`
+- `FIREBASE_TOKEN`: Optional token for Firebase App Distribution CLI when using `deploy_android_firebase`
+
+### Lane Inputs
+**iOS `deploy_ios`**
+- `app_name` (required): used for artifact filenames and git tags
+- `scheme` (required): Xcode scheme to build
+- `export_options` (required): path to an export options plist or a hash accepted by `build_app`
+- Optional: `slack_message` plus `enable_slack_notification: true` and/or `enable_git_tagging: true`
+
+**Android `deploy_android`**
+- `app_identifier` (required): package name used when uploading to Google Play
+- `flavor` and `target` (required): forwarded to `flutter build`
+- `track` (optional, default `internal`): Google Play track
+- `app_name` (optional but required if git tagging is enabled): used for artifact naming
+- Optional: `slack_message` plus `enable_slack_notification: true` and/or `enable_git_tagging: true`
+
+**Android `deploy_android_firebase`**
+- `firebase_app_id` (required): Firebase App Distribution app identifier
+- `flavor` and `target` (required): forwarded to `flutter build`
+- `build` (optional, default `apk`): Flutter build type (e.g. `appbundle` or `apk`)
+- `app_name` (optional but required if git tagging is enabled): used for artifact naming
+- Optional: `slack_message` plus `enable_slack_notification: true` and/or `enable_git_tagging: true`
+
+### Running Lanes Locally
+- Ensure a populated `.env` (or lane-specific variant) exists in the `fastlane/` directory before running commands
+- Execute Fastlane commands from the `fastlane/` directory so the relative paths in the lanes resolve correctly
+- iOS example: `bundle exec fastlane ios deploy_ios app_name:"Example APP" scheme:"production" export_options:"./fastlane/export_options.plist"`
+- Android (Play Store) example: `bundle exec fastlane android deploy_android app_name:"Example APP" app_identifier:"com.example.exampleapp" flavor:"production" target:"lib/main_production.dart"`
+- Android (Firebase) example: `bundle exec fastlane android deploy_android_firebase app_name:"Example APP Dev" firebase_app_id:"1:123" flavor:"development" target:"lib/main_development.dart"`
 
 ### Project-Specific Configuration
 
@@ -108,7 +153,7 @@ Dir.mktmpdir do |tmpdir|
   import "#{clone_folder}/Fastfile"
 end
 
-# Import configs.rb if you created common one for monorepo or default Appfile will be used
+# .env files that live next to this Fastfile (e.g. .env, .env.prod) are loaded automatically by Fastlane
 
 platform :ios do
   desc "Deploy production application to TestFlight"
@@ -117,6 +162,14 @@ platform :ios do
       scheme: "production",
       app_name: "Example APP",
       slack_message: "Example APP iOS: Production app successfully released!",
+      export_options: {
+        provisioningProfiles: {
+          "com.example.bundleid" => "Provisioning Profile Name",
+          "com.example.bundleid2" => "Provisioning Profile Name 2"
+        }
+      },
+      enable_slack_notification: true, # optional, default false
+      enable_git_tagging: true,        # optional, default false
     )
   end
 end
@@ -127,11 +180,7 @@ end
 ```ruby
 # apps/example_app/ios/fastlane/Appfile
 
-# If not using common configs.rb, configure app-specific credentials here
-ENV['APP_STORE_KEY_ID'] = "Example123"
-ENV['APP_STORE_ISSUER_ID'] = "1234567890"
-ENV['APP_STORE_KEY_FILENAME'] = "AuthKey_Example123.p8"
-ENV['SLACK_URL'] = "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
+# Credentials are typically loaded from .env; override here only if you need per-app values
 
 # You can use environment variables or provide static values
 for_platform :ios do
@@ -161,7 +210,7 @@ Dir.mktmpdir do |tmpdir|
   import "#{clone_folder}/Fastfile"
 end
 
-# Import configs.rb if you created common one for monorepo or default Appfile will be used
+# .env files that live next to this Fastfile (e.g. .env, .env.prod) are loaded automatically by Fastlane
 
 platform :android do
   desc "Deploy production application to Play Store"
@@ -172,7 +221,9 @@ platform :android do
       app_identifier: "com.example.exampleapp",
       flavor: "production",
       target: "lib/main_production.dart",
-      slack_message: "Example APP Android: Production app successfully released!"
+      slack_message: "Example APP Android: Production app successfully released!",
+      enable_slack_notification: true, # optional, default false
+      enable_git_tagging: true,        # optional, default false
     )
   end
 
@@ -185,7 +236,9 @@ platform :android do
       flavor: "development",
       target: "lib/main_development.dart",
       build: "apk",
-      slack_message: "Example APP Android: Development build uploaded to Firebase!"
+      slack_message: "Example APP Android: Development build uploaded to Firebase!",
+      enable_slack_notification: true, # optional, default false
+      enable_git_tagging: true,        # optional, default false
     )
   end
 end
@@ -196,13 +249,12 @@ end
 ```ruby
 # apps/better_iptv/android/fastlane/Appfile
 
-# If not using common configs.rb, configure app-specific credentials here
-ENV['JSON_KEY_FILE_PATH'] = "../store_keys/xxx.json"
-ENV['SLACK_URL'] = "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
+# Credentials are typically loaded from .env; override here only if you need per-app values
 ```
 
 ### Configuration Priority
 
-1. App-specific Appfile configurations take precedence over common configs
-2. Environment variables set in the CI/CD pipeline take precedence over both
-3. If using common configs.rb, Appfile configurations are optional
+1. Environment variables exported by the shell or CI pipeline override everything else
+2. Lane-specific dotenv files (e.g. `.env.prod`, `.env.deploy_ios`) override values from the base `.env`
+3. The base `.env` file supplies default values for all lanes
+4. Values hard-coded inside an Appfile override defaults for the matching platform/lane when present
