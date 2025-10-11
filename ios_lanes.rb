@@ -57,7 +57,17 @@ platform :ios do
     UI.message("App Name: #{appname}")
     UI.message("Scheme: #{scheme}")
 
-    cocoapods(use_bundle_exec: true)
+    should_use_bundle_exec = if options.key?(:use_bundle_exec)
+      option_enabled?(options[:use_bundle_exec])
+    else
+      true
+    end
+
+    if should_use_bundle_exec
+      cocoapods(use_bundle_exec: true)
+    else
+      cocoapods(clean: true, use_bundle_exec: false)
+    end
   
     build_app(
       workspace: 'Runner.xcworkspace',

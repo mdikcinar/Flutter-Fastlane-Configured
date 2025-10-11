@@ -97,6 +97,7 @@ iOS specific lanes:
 - `app_name` (required): used for artifact filenames and git tags
 - `scheme` (required): Xcode scheme to build
 - `export_options` (required): path to an export options plist or a hash accepted by `build_app`
+- Optional: `use_bundle_exec` (default `true`): set to `false` to skip Bundler for CocoaPods and run a clean install instead
 - Optional: `slack_message` plus `enable_slack_notification: true` and/or `enable_git_tagging: true`
 
 **Android `deploy_android`**
