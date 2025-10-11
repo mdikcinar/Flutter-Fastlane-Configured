@@ -115,8 +115,14 @@ platform :android do
     increment_build_number_lane(options)
     flutter_build(options)
     build_store(options)
-    #send_slack_message(options)
-    #add_git_tag_method(options)
+
+    if option_enabled?(options[:enable_slack_notification])
+      send_slack_message(options)
+    end
+
+    if option_enabled?(options[:enable_git_tagging])
+      add_git_tag_method(options)
+    end
   end
 
   desc 'Deploy to Firebase'
@@ -125,7 +131,13 @@ platform :android do
     increment_firebase_build_number_lane(options)
     flutter_build(options)
     upload_to_firebase(options)
-    #send_slack_message(options)
-    #add_git_tag_method(options)
+
+    if option_enabled?(options[:enable_slack_notification])
+      send_slack_message(options)
+    end
+
+    if option_enabled?(options[:enable_git_tagging])
+      add_git_tag_method(options)
+    end
   end
 end 

@@ -7,7 +7,11 @@ platform :ios do
 
     key_id = ENV['APP_STORE_CONNECT_KEY_IDENTIFIER']
     issuer_id = ENV['APP_STORE_CONNECT_ISSUER_ID']
-    key_content = ENV['APP_STORE_CONNECT_PRIVATE_KEY']
+    key_content = fetch_app_store_private_key_content
+
+    if key_content.nil? || key_content.empty?
+      UI.user_error!('App Store Connect private key content could not be loaded. Set APP_STORE_CONNECT_PRIVATE_KEY or APP_STORE_CONNECT_PRIVATE_KEY_PATH.')
+    end
 
     UI.message("App Store Connect Credentials:")
     UI.message("Key ID: #{key_id}")
@@ -92,7 +96,13 @@ platform :ios do
     build_app_lane(options)
     upload_to_testflight_lane(options)
     upload_symbols_to_crashlytics_lane(options)
-    #send_slack_message(options)
-    #add_git_tag_method(options)
+
+    if option_enabled?(options[:enable_slack_notification])
+      send_slack_message(options)
+    end
+
+    if option_enabled?(options[:enable_git_tagging])
+      add_git_tag_method(options)
+    end
   end
 end 
