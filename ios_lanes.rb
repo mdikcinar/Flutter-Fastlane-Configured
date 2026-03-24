@@ -81,11 +81,34 @@ platform :ios do
   desc 'Upload to TestFlight'
   lane :upload_to_testflight_lane do |options|
     appname = options[:app_name]
-    
-    upload_to_testflight(
+    whats_new = resolve_text_option(
+      options,
+      direct_key: :whats_new,
+      path_key: :whats_new_path,
+      label: "What's New"
+    )
+    changelog = resolve_text_option(
+      options,
+      direct_key: :changelog,
+      path_key: :changelog_path,
+      label: 'Changelog'
+    )
+    whats_new_locale = options[:whats_new_locale].to_s.strip
+
+    upload_options = {
       skip_waiting_for_build_processing: true,
       ipa: "./../build/ios/#{appname}.ipa"
-    )
+    }
+
+    upload_options[:localized_build_info] = {
+      (whats_new_locale.empty? ? 'en-US' : whats_new_locale) => {
+        whats_new: whats_new
+      }
+    } unless whats_new.nil? || whats_new.empty?
+
+    upload_options[:changelog] = changelog unless changelog.nil? || changelog.empty?
+
+    upload_to_testflight(upload_options)
   end
 
   desc 'Upload dSYM to Crashlytics'

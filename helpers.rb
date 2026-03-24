@@ -65,3 +65,18 @@ def option_enabled?(value)
 
   value == true
 end
+
+def resolve_text_option(options, direct_key:, path_key:, label:)
+  direct_value = options[direct_key].to_s.strip
+  path_value = options[path_key].to_s.strip
+
+  return direct_value unless direct_value.empty?
+  return nil if path_value.empty?
+
+  expanded_path = File.expand_path(path_value, __dir__)
+  unless File.exist?(expanded_path)
+    UI.user_error!("#{label} file does not exist at #{expanded_path}")
+  end
+
+  File.read(expanded_path).strip
+end
