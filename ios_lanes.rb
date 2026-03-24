@@ -81,30 +81,20 @@ platform :ios do
   desc 'Upload to TestFlight'
   lane :upload_to_testflight_lane do |options|
     appname = options[:app_name]
-    whats_new = resolve_text_option(
-      options,
-      direct_key: :whats_new,
-      path_key: :whats_new_path,
-      label: "What's New"
-    )
+    localized_build_info = resolve_localized_build_info_option(options)
     changelog = resolve_text_option(
       options,
       direct_key: :changelog,
       path_key: :changelog_path,
       label: 'Changelog'
     )
-    whats_new_locale = options[:whats_new_locale].to_s.strip
 
     upload_options = {
       skip_waiting_for_build_processing: true,
       ipa: "./../build/ios/#{appname}.ipa"
     }
 
-    upload_options[:localized_build_info] = {
-      (whats_new_locale.empty? ? 'en-US' : whats_new_locale) => {
-        whats_new: whats_new
-      }
-    } unless whats_new.nil? || whats_new.empty?
+    upload_options[:localized_build_info] = localized_build_info unless localized_build_info.nil? || localized_build_info.empty?
 
     upload_options[:changelog] = changelog unless changelog.nil? || changelog.empty?
 

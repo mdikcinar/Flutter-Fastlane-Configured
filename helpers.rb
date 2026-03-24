@@ -66,6 +66,15 @@ def option_enabled?(value)
   value == true
 end
 
+def read_option_file(path_value, label:)
+  expanded_path = File.expand_path(path_value, __dir__)
+  unless File.exist?(expanded_path)
+    UI.user_error!("#{label} file does not exist at #{expanded_path}")
+  end
+
+  File.read(expanded_path)
+end
+
 def resolve_text_option(options, direct_key:, path_key:, label:)
   direct_value = options[direct_key].to_s.strip
   path_value = options[path_key].to_s.strip
@@ -73,10 +82,71 @@ def resolve_text_option(options, direct_key:, path_key:, label:)
   return direct_value unless direct_value.empty?
   return nil if path_value.empty?
 
-  expanded_path = File.expand_path(path_value, __dir__)
-  unless File.exist?(expanded_path)
-    UI.user_error!("#{label} file does not exist at #{expanded_path}")
+  read_option_file(path_value, label: label).strip
+end
+
+def normalize_localized_build_info(value, label:)
+  UI.user_error!("#{label} must be a Hash keyed by locale") unless value.is_a?(Hash)
+
+  value.each_with_object({}) do |(locale, info), normalized|
+    locale_key = locale.to_s.strip
+    UI.user_error!("#{label} contains an empty locale key") if locale_key.empty?
+
+    whats_new_value = if info.is_a?(Hash)
+      invalid_keys = info.keys.map(&:to_s) - ['whats_new']
+      unless invalid_keys.empty?
+        UI.user_error!("Invalid keys for #{label}[#{locale_key}]: #{invalid_keys.join(', ')}")
+      end
+
+      info[:whats_new] || info['whats_new']
+    else
+      info
+    end
+
+    whats_new_text = whats_new_value.to_s.strip
+    if whats_new_text.empty?
+      UI.user_error!("Missing whats_new for locale #{locale_key} in #{label}")
+    end
+
+    normalized[locale_key] = { whats_new: whats_new_text }
+  end
+end
+
+def resolve_localized_build_info_option(options)
+  localized_build_info = options[:localized_build_info]
+  localized_build_info_path = options[:localized_build_info_path].to_s.strip
+  whats_new = options[:whats_new]
+
+  unless localized_build_info.nil?
+    return normalize_localized_build_info(localized_build_info, label: 'localized_build_info')
   end
 
-  File.read(expanded_path).strip
+  unless localized_build_info_path.empty?
+    file_content = read_option_file(localized_build_info_path, label: 'localized_build_info')
+    parsed_content = YAML.load(file_content)
+    return nil if parsed_content.nil?
+
+    return normalize_localized_build_info(parsed_content, label: 'localized_build_info_path')
+  end
+
+  if whats_new.is_a?(Hash)
+    return normalize_localized_build_info(whats_new, label: 'whats_new')
+  end
+
+  whats_new_text = resolve_text_option(
+    options,
+    direct_key: :whats_new,
+    path_key: :whats_new_path,
+    label: "What's New"
+  )
+  return nil if whats_new_text.nil? || whats_new_text.empty?
+
+  whats_new_locale = options[:whats_new_locale].to_s.strip
+  locale_key = whats_new_locale.empty? ? 'default' : whats_new_locale
+
+  {
+    locale_key => {
+      whats_new: whats_new_text
+    }
+  }
 end

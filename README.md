@@ -99,9 +99,11 @@ iOS specific lanes:
 - `scheme` (required): Xcode scheme to build
 - `export_options` (required): path to an export options plist or a hash accepted by `build_app`
 - Optional: `use_bundle_exec` (default `true`): set to `false` to skip Bundler for CocoaPods and run a clean install instead
-- Optional: `whats_new`: sends localized `What's New` text to TestFlight build info
-- Optional: `whats_new_path`: reads `What's New` text from a file
-- Optional: `whats_new_locale` (default `en-US`): locale key used with `whats_new`
+- Optional: `localized_build_info`: sends multi-locale `What's New` content using Fastlane's native hash format
+- Optional: `localized_build_info_path`: reads multi-locale `What's New` content from a YAML file
+- Optional: `whats_new`: shorthand for single text or a locale-to-text hash
+- Optional: `whats_new_path`: reads single-locale `What's New` text from a file
+- Optional: `whats_new_locale` (default `default`): locale key used only when `whats_new` is a single string
 - Optional: `changelog`: sends `What to Test` text
 - Optional: `changelog_path`: reads `What to Test` text from a file
 - Optional: `slack_message` plus `enable_slack_notification: true` and/or `enable_git_tagging: true`
@@ -123,7 +125,7 @@ iOS specific lanes:
 ### Running Lanes Locally
 - Ensure a populated `.env` (or lane-specific variant) exists in the `fastlane/` directory before running commands
 - Execute Fastlane commands from the `fastlane/` directory so the relative paths in the lanes resolve correctly
-- iOS example: `bundle exec fastlane ios deploy_ios app_name:"Example APP" scheme:"production" export_options:"./fastlane/export_options.plist" whats_new:"Bu surumde performans iyilestirmeleri yapildi." whats_new_locale:"tr-TR"`
+- iOS example: `bundle exec fastlane ios deploy_ios app_name:"Example APP" scheme:"production" export_options:"./fastlane/export_options.plist" localized_build_info_path:"./fastlane/testflight_whats_new.yml"`
 - Android (Play Store) example: `bundle exec fastlane android deploy_android app_name:"Example APP" app_identifier:"com.example.exampleapp" flavor:"production" target:"lib/main_production.dart"`
 - Android (Firebase) example: `bundle exec fastlane android deploy_android_firebase app_name:"Example APP Dev" firebase_app_id:"1:123" flavor:"development" target:"lib/main_development.dart"`
 
@@ -168,8 +170,14 @@ platform :ios do
     deploy_ios(
       scheme: "production",
       app_name: "Example APP",
-      whats_new: "Bu surumde performans ve kararlilik iyilestirmeleri yapildi.",
-      whats_new_locale: "tr-TR",
+      localized_build_info: {
+        "tr-TR" => {
+          whats_new: "Bu surumde performans ve kararlilik iyilestirmeleri yapildi."
+        },
+        "en-US" => {
+          whats_new: "Performance and stability improvements were added in this release."
+        }
+      },
       slack_message: "Example APP iOS: Production app successfully released!",
       export_options: {
         provisioningProfiles: {
@@ -182,6 +190,15 @@ platform :ios do
     )
   end
 end
+```
+
+Example YAML for `localized_build_info_path`:
+
+```yaml
+tr-TR:
+  whats_new: "Bu surumde performans ve kararlilik iyilestirmeleri yapildi."
+en-US:
+  whats_new: "Performance and stability improvements were added in this release."
 ```
 
 #### Example iOS Appfile
