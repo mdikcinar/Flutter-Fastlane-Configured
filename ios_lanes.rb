@@ -117,11 +117,21 @@ platform :ios do
       gsp_path: "./flavors/#{scheme}/GoogleService-Info.plist"
     }
 
-    # With Firebase from Swift Package Manager, upload-symbols lives in the
-    # resolved SourcePackages checkout rather than ./Pods. Point the action there
-    # when it exists; otherwise fall back to the default Pods lookup (CocoaPods).
-    spm_upload_symbols = "#{IOS_DERIVED_DATA_PATH}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/upload-symbols"
-    crashlytics_params[:binary_path] = spm_upload_symbols if File.exist?(spm_upload_symbols)
+    # With Firebase from Swift Package Manager, upload-symbols ships inside the
+    # resolved SourcePackages checkout rather than ./Pods. Resolve it from an
+    # absolute anchor (the IPA build_app produced) instead of a relative path,
+    # because fastlane runs the lane body from a different working directory than
+    # actions — a relative File.exist? check silently misses. Fall back to the
+    # default ./Pods lookup when absent (CocoaPods-based setups).
+    ipa_path = lane_context[SharedValues::IPA_OUTPUT_PATH]
+    unless ipa_path.nil? || ipa_path.empty?
+      build_dir = File.dirname(File.dirname(File.expand_path(ipa_path)))
+      spm_upload_symbols = File.join(
+        build_dir, File.basename(IOS_DERIVED_DATA_PATH),
+        'SourcePackages', 'checkouts', 'firebase-ios-sdk', 'Crashlytics', 'upload-symbols'
+      )
+      crashlytics_params[:binary_path] = spm_upload_symbols if File.exist?(spm_upload_symbols)
+    end
 
     upload_symbols_to_crashlytics(crashlytics_params)
   end
