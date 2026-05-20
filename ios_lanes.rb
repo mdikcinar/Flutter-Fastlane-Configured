@@ -1,5 +1,10 @@
 # frozen_string_literal: true
 
+# Pinned derived data path so SwiftPM-resolved packages land in a known location.
+# Firebase (when added via Swift Package Manager) ships the Crashlytics
+# `upload-symbols` binary inside this tree instead of ./Pods.
+IOS_DERIVED_DATA_PATH = './../build/ios_derived_data'
+
 platform :ios do
   desc 'Setup App Store Connect API Key'
   lane :connect_app_store do |options|
@@ -74,6 +79,7 @@ platform :ios do
       scheme: scheme,
       output_directory: './../build/ios',
       output_name: "#{appname}.ipa",
+      derived_data_path: IOS_DERIVED_DATA_PATH,
       export_options: export_options
     )
   end
@@ -106,10 +112,18 @@ platform :ios do
     appname = options[:app_name]
     scheme = options[:scheme]
 
-    upload_symbols_to_crashlytics(
+    crashlytics_params = {
       dsym_path: "./../build/ios/#{appname}.app.dSYM.zip",
       gsp_path: "./flavors/#{scheme}/GoogleService-Info.plist"
-    )
+    }
+
+    # With Firebase from Swift Package Manager, upload-symbols lives in the
+    # resolved SourcePackages checkout rather than ./Pods. Point the action there
+    # when it exists; otherwise fall back to the default Pods lookup (CocoaPods).
+    spm_upload_symbols = "#{IOS_DERIVED_DATA_PATH}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/upload-symbols"
+    crashlytics_params[:binary_path] = spm_upload_symbols if File.exist?(spm_upload_symbols)
+
+    upload_symbols_to_crashlytics(crashlytics_params)
   end
 
   desc 'Deploy to TestFlight'
